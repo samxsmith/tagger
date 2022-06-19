@@ -38,13 +38,7 @@ func AddTag(filePath string, tags []string) error {
 
 	tagFile := unmarshalTagFile(b)
 
-	if _, ok := tagFile[taggedFileName(filename)]; !ok {
-		tagFile[taggedFileName(filename)] = map[tagValue]bool{}
-	}
-
-	for _, t := range tags {
-		tagFile[taggedFileName(filename)][tagValue(t)] = true
-	}
+	tagFile = tagFile.AddTag(filename, tags)
 
 	tagFileB := marshalTagFile(tagFile)
 	err = safeWriteTagFile(dir, tagFileB)

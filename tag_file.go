@@ -54,6 +54,18 @@ func serialiseTags(filename taggedFileName, tags map[tagValue]bool) string {
 
 type TagFile map[taggedFileName]map[tagValue]bool
 
+func (tagFile TagFile) AddTag(filename string, tags []string) TagFile {
+	if _, ok := tagFile[taggedFileName(filename)]; !ok {
+		tagFile[taggedFileName(filename)] = map[tagValue]bool{}
+	}
+
+	for _, t := range tags {
+		tagFile[taggedFileName(filename)][tagValue(t)] = true
+	}
+
+	return tagFile
+}
+
 func unmarshalTagFile(b []byte) TagFile {
 	s := string(b)
 	lines := strings.Split(s, "\n")

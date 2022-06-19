@@ -1,31 +1,16 @@
-package main
+package e2e
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/samxsmith/tagger"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestInit(t *testing.T) {
-	t.SkipNow()
-}
-
-func TestListTag(t *testing.T) {
-	t.SkipNow()
-}
-
-func TestRemoveTag(t *testing.T) {
-	t.SkipNow()
-}
-
-func TestUpdateFileTags(t *testing.T) {
-	t.SkipNow()
-}
 
 type fileToTag struct {
 	filename string
@@ -102,7 +87,8 @@ func TestTagAndQuery(t *testing.T) {
 
 	for i, tt := range queriesToTest {
 		t.Run(fmt.Sprintf("case %d) %s", i, tt.description), func(t *testing.T) {
-			files, err := tagger.QueryForFilenames(tt.queryString, nil)
+			query := strings.Split(tt.queryString, " ")
+			files, err := tagger.QueryForFilenames("test_data/files_to_tag", query, nil)
 			assert.Nil(t, err)
 			for i, f := range tt.expectedFiles {
 				tt.expectedFiles[i] = filepath.Join("test_data/files_to_tag", f)

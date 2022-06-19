@@ -2,9 +2,6 @@ package tagger
 
 import (
 	"fmt"
-	"io"
-	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -14,55 +11,18 @@ type QueryOpts struct {
 	DisableRecursive bool
 }
 
-func QueryForFilenames(query string, opts *QueryOpts) ([]string, error) {
-	// parse query
-	// AND is implied with multiple tags
-	// tag cannot have spaces as enforced by validateTags(...)
-	// tags in query are split by space
-	queryTags := strings.Split(query, " ")
-	allMatches := make(TagFile)
+func QueryForFilenames(dir string, queryTags []string, opts *QueryOpts) ([]string, error) {
+	combinedTagFile, err := digestTagFilesRecursively(dir)
 
-	// find and read all tag files recursively
-	filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !isTagFile(path) {
-			return nil
-		}
+	if err != nil {
+		return nil, fmt.Errorf("error walking file tree: %w", err)
+	}
 
-		f, err := os.Open(path)
-		if err != nil {
-			return fmt.Errorf("open failed: %w", err)
-		}
-		defer f.Close()
-
-		b, err := io.ReadAll(f)
-		if err != nil {
-			return fmt.Errorf("failed to read file: %w", err)
-		}
-
-		dir := filepath.Dir(path)
-
-		tagFile := unmarshalTagFile(b)
-
-		// prepend the directory so the result has
-		// the correct path to the file
-		tagFile = prependDirectoryToFileNames(dir, tagFile)
-
-		matches := applyQuery(queryTags, tagFile)
-		allMatches = appendToMap(allMatches, matches)
-
-		return nil
-	})
-
-	matchingFileNames := make([]string, len(allMatches))
+	matches := applyQuery(queryTags, combinedTagFile)
+	matchingFileNames := make([]string, len(matches))
 
 	i := 0
-	for file := range allMatches {
+	for file := range matches {
 		matchingFileNames[i] = string(file)
 		i++
 	}
@@ -72,13 +32,14 @@ func QueryForFilenames(query string, opts *QueryOpts) ([]string, error) {
 }
 
 func applyQuery(queriedTags []string, tf TagFile) TagFile {
+	res := make(TagFile)
 	for file, tags := range tf {
-		if !fileHasAllQueriedTags(queriedTags, tags) {
-			delete(tf, file)
+		if fileHasAllQueriedTags(queriedTags, tags) {
+			res[file] = tags
 		}
 	}
 
-	return tf
+	return res
 }
 
 func fileHasAllQueriedTags(queriedTags []string, fileTags map[tagValue]bool) bool {
@@ -104,7 +65,6 @@ func fileTagsMatchWildcard(queryTag string, fileTags map[tagValue]bool) bool {
 	prefix := strings.TrimSuffix(queryTag, "*")
 	for t := range fileTags {
 		if strings.HasPrefix(string(t), prefix) {
-			fmt.Println("WILDCARD MATCH", t)
 			return true
 		}
 	}

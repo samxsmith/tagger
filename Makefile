@@ -1,4 +1,7 @@
 COVERAGE_OUT=coverage.out
+install:
+	@go install cmd/tagger/tagger.go
+
 test:
 	@go test ./...
 
